@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Game sample</title>
+	<style>
+		/* ========== CSS จัด layout และตกแต่ง UI ========== */
+		.flex-row {
+			display: flex;
+			flex-direction: row;   /* จัดเรียงแนวนอน */
+			justify-content: left;
+		}
+		.flex-col {
+			display: flex;
+			flex-direction: column; /* จัดเรียงแนวตั้ง */
+			justify-content: left;
+		}
+		.flex-item {
+			margin: 3px;
+			padding: 10px;
+			border: 1px solid #ccc;
+			border-radius: 5px;
+			box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+		}
+		.message {
+			margin-bottom: 3px;
+			padding: 10px;
+			border: 1px solid #eee;
+			border-radius: 5px;
+			box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+		}
+	</style>
+
+	<!--
+		เชื่อมโยง JavaScript ฝั่ง client
+		- index.js จะจัดการ logic การเชื่อมต่อ socket, join game, input, และการวาดบน canvas
+		- ใช้ type="module" เพื่อรองรับ ES6 import/export
+	-->
+	<script type="module" src="{{ url_for('static', filename='index.js') }}"></script>
+</head>
+<body>
+	<h1>WebSocket - Game sample</h1>
+
+	<!-- แถวบน: ปุ่ม connect / เลือกตัวละคร / disconnect -->
+	<div class="flex-row">
+		<!-- ปุ่มเชื่อมต่อ server -->
+		<div class="flex-item" style="flex: 1;">
+			<!-- กดเพื่อเชื่อมต่อกับ WebSocket server -->
+			<button type="button" id="connect">เชื่อมต่อ Server</button>
+		</div>
+
+		<!-- UI สำหรับเลือกตัวละคร -->
+		<div class="flex-item" style="flex: 1;">
+			<!-- เลือกรูปร่างที่จะใช้เป็น avatar -->
+			<select id="shape">
+				<option value="">เลือกรูปร่าง</option>
+				<option value="circle">วงกลม</option>
+				<option value="square">สี่เหลี่ยม</option>
+				<option value="triangle">สามเหลี่ยม</option>
+			</select>
+			<!-- เลือกสีตัวละคร -->
+			<input type="color" id="color" value="#000000">
+			<!-- กรอกชื่อผู้เล่น -->
+			<input type="text" id="name" placeholder="ป้อนชื่อ">
+			<!-- ปุ่มเข้าเกม (join) -->
+			<button type="button" id="join">เข้าเล่น</button>
+		</div>
+
+		<!-- ปุ่ม disconnect -->
+		<div class="flex-item" style="flex: 1;">
+			<!-- กดเพื่อยกเลิกการเชื่อมต่อกับ server -->
+			<button type="button" id="disconnect">ตัดการเชื่อมต่อ Server</button>
+		</div>
+	</div>
+
+	<!-- แถวล่าง: พื้นที่เล่นเกม (canvas) -->
+	<div class="flex-row">
+		<div class="flex-item" style="flex: 1;">
+			<h3>Game</h3>
+			<!-- canvas ขนาด 800x600 ใช้แสดงผู้เล่นที่ขยับในเกม
+				 - ผู้เล่นแต่ละคนจะถูกวาดบน canvas ตามข้อมูลที่ได้รับจาก server -->
+			<canvas id="gameCanvas" width="800" height="600" class="flex-item" style="flex: 1;"></canvas>
+		</div>
+	</div>
+</body>
+</html>
