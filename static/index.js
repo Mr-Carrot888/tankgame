@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
-	const socket = io("http://localhost:5000", { autoConnect: false, transports: ["websocket"] });
+	const socket = io("https://d61a118bba47.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
 
 	// ===== จัดการ UI ให้เปิด/ปิดตามสถานะการเชื่อมต่อ =====
 	// ฟังก์ชันสำหรับปรับสถานะปุ่มต่างๆในหน้าเว็บ
