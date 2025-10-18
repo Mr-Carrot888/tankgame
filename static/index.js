@@ -36,7 +36,130 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
-	const socket = io("http://localhost:5000", { autoConnect: false, transports: ["websocket"] });
+	const socket = io("https://d91a432137b9.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
+
+function drawCharacter(ctxGame, x, y, angle = 0, color = 'red', SCALE_FACTOR = 0.5) { 
+    ctxGame.save();
+    ctxGame.translate(x, y); 
+    ctxGame.rotate(angle); 
+
+    const headRadius = 25 * SCALE_FACTOR; 
+    const skinColor = "#e0b28f";
+    const shoulderColor = "#333";
+    const gunRotation = -Math.PI / 2; 
+
+    ctxGame.save();
+    ctxGame.rotate(gunRotation); 
+
+    const gunW = 40 * SCALE_FACTOR; 
+    const gunH = 16 * SCALE_FACTOR;
+    const gunLocalX = headRadius + (4 * SCALE_FACTOR); 
+    const gunLocalY = -gunH / 2;     
+
+    const barrelW = 22 * SCALE_FACTOR, barrelH = 8 * SCALE_FACTOR; 
+    ctxGame.fillStyle = "#333";
+    ctxGame.strokeStyle = "black";
+    ctxGame.lineWidth = 2 * SCALE_FACTOR; 
+    ctxGame.fillRect(gunLocalX, gunLocalY, gunW, gunH); 
+    ctxGame.strokeRect(gunLocalX, gunLocalY, gunW, gunH);
+    ctxGame.fillRect(gunLocalX + gunW, gunLocalY + (gunH - barrelH)/2, barrelW, barrelH);
+    ctxGame.strokeRect(gunLocalX + gunW, gunLocalY + (gunH - barrelH)/2, barrelW, barrelH);
+
+    ctxGame.restore(); 
+
+    // ------------------------------------------ คำนวณตำแหน่ง "มือ" (Hand World Coordinates) ------------------------------------------
+    
+    // จุดจับบนปืนใน local coordinates ก่อนหมุน
+    const gripLow_local_x = gunLocalX + (8 * SCALE_FACTOR);     
+    const gripHigh_local_x = gunLocalX + gunW - (8 * SCALE_FACTOR); 
+    const gripY_local = gunLocalY + (gunH / 2); 
+
+    // มือขวา (Right Hand) -> จับจุดสูงกว่า
+    const handWorldX_R = Math.cos(gunRotation) * gripHigh_local_x - Math.sin(gunRotation) * gripY_local + 3;
+    const handWorldY_R = Math.sin(gunRotation) * gripHigh_local_x + Math.cos(gunRotation) * gripY_local - 1;
+    
+    // มือซ้าย (Left Hand) -> จับจุดต่ำกว่า
+    const handWorldX_L = Math.cos(gunRotation) * gripLow_local_x - Math.sin(gunRotation) * gripY_local - 3;
+    const handWorldY_L = Math.sin(gunRotation) * gripLow_local_x + Math.cos(gunRotation) * gripY_local;
+
+
+    // ------------------------------------------ วาดแขนและมือ (Arms and Hands) ------------------------------------------
+    
+    const armStartX_R = headRadius + (6 * SCALE_FACTOR); 
+    const armStartY_R = 10 * SCALE_FACTOR; 
+    const armStartX_L = -headRadius - (6 * SCALE_FACTOR); 
+    const armStartY_L = 10 * SCALE_FACTOR;
+
+    // Control Points สำหรับเส้นโค้ง
+    const cpX_R = headRadius + (30 * SCALE_FACTOR);
+    const cpY_R = 10 * SCALE_FACTOR;             
+    const cpX_L = -headRadius - (30 * SCALE_FACTOR); 
+    const cpY_L = 10 * SCALE_FACTOR;              
+
+    // วาดแขนขวา
+    ctxGame.save();
+    ctxGame.lineWidth = 6 * SCALE_FACTOR;
+    ctxGame.lineCap = "round";
+    ctxGame.strokeStyle = skinColor;
+    ctxGame.beginPath();
+    ctxGame.moveTo(armStartX_R, armStartY_R);
+    ctxGame.quadraticCurveTo(cpX_R, cpY_R, handWorldX_R, handWorldY_R);
+    ctxGame.stroke();
+
+    // วาดมือขวา
+    ctxGame.beginPath();
+    ctxGame.fillStyle = skinColor;
+    ctxGame.arc(handWorldX_R, handWorldY_R, 6 * SCALE_FACTOR, 0, Math.PI * 2); 
+    ctxGame.fill();
+    ctxGame.strokeStyle = "black";
+    ctxGame.lineWidth = 1 * SCALE_FACTOR; 
+    ctxGame.stroke();
+    ctxGame.restore();
+
+    // วาดแขนซ้าย
+    ctxGame.save();
+    ctxGame.lineWidth = 6 * SCALE_FACTOR;
+    ctxGame.lineCap = "round";
+    ctxGame.strokeStyle = skinColor;
+    ctxGame.beginPath();
+    ctxGame.moveTo(armStartX_L, armStartY_L);
+    ctxGame.quadraticCurveTo(cpX_L, cpY_L, handWorldX_L, handWorldY_L);
+    ctxGame.stroke();
+
+    // วาดมือซ้าย
+    ctxGame.beginPath();
+    ctxGame.fillStyle = skinColor;
+    ctxGame.arc(handWorldX_L, handWorldY_L, 6 * SCALE_FACTOR, 0, Math.PI * 2); 
+    ctxGame.fill();
+    ctxGame.strokeStyle = "black";
+    ctxGame.lineWidth = 1 * SCALE_FACTOR;
+    ctxGame.stroke();
+    ctxGame.restore();
+
+
+    // ------------------------------------------ หัว, ตา, ไหล่ ------------------------------------------
+    
+    // หัว
+    ctxGame.beginPath();
+    ctxGame.fillStyle = color; 
+    ctxGame.strokeStyle = "black";
+    ctxGame.lineWidth = 3 * SCALE_FACTOR;
+    ctxGame.arc(0, 0, headRadius, 0, Math.PI * 2);
+    ctxGame.fill();
+    ctxGame.stroke();
+
+    // ตา
+    ctxGame.fillStyle = "black";
+    ctxGame.beginPath(); ctxGame.arc(-8 * SCALE_FACTOR, -8 * SCALE_FACTOR, 3 * SCALE_FACTOR, 0, Math.PI * 2); ctxGame.fill(); 
+    ctxGame.beginPath(); ctxGame.arc(8 * SCALE_FACTOR, -8 * SCALE_FACTOR, 3 * SCALE_FACTOR, 0, Math.PI * 2); ctxGame.fill();
+
+    // ไหล่ (Shoulders)
+    ctxGame.fillStyle = shoulderColor;
+    ctxGame.beginPath(); ctxGame.arc(armStartX_R, armStartY_R, 8 * SCALE_FACTOR, 0, Math.PI * 2); ctxGame.fill(); ctxGame.stroke(); 
+    ctxGame.beginPath(); ctxGame.arc(armStartX_L, armStartY_L, 8 * SCALE_FACTOR, 0, Math.PI * 2); ctxGame.fill(); ctxGame.stroke(); 
+
+    ctxGame.restore();
+}
 
 	// ===== จัดการ UI ให้เปิด/ปิดตามสถานะการเชื่อมต่อ =====
 	// ฟังก์ชันสำหรับปรับสถานะปุ่มต่างๆในหน้าเว็บ
@@ -166,29 +289,13 @@ document.addEventListener("DOMContentLoaded", function() {
 		players.forEach(player => {
 			ctxGame.fillStyle = player.color; // กำหนดสีตัวละคร
 			switch (player.shape) {
-				case "circle":
-					// วาดวงกลม
-					ctxGame.beginPath();
-					ctxGame.arc(player.pos.x, player.pos.y, 20, 0, Math.PI * 2);
-					ctxGame.fill();
-					break;
-				case "square":
-					// วาดสี่เหลี่ยม
-					ctxGame.fillRect(player.pos.x - 20, player.pos.y - 20, 40, 40);
-					break;
-				case "triangle":
-					// วาดสามเหลี่ยม
-					ctxGame.beginPath();
-					ctxGame.moveTo(player.pos.x, player.pos.y - 20);
-					ctxGame.lineTo(player.pos.x - 20, player.pos.y + 20);
-					ctxGame.lineTo(player.pos.x + 20, player.pos.y + 20);
-					ctxGame.closePath();
-					ctxGame.fill();
-					break;
+				case "Character":
+				    drawCharacter(ctxGame, player.pos.x, player.pos.y, player.angle || 0, player.color);	
+					break;	
 			}
 			// วาดชื่อ player ไว้เหนือหัว
 			ctxGame.fillStyle = "#000";
-			ctxGame.fillText(player.name, player.pos.x - 10, player.pos.y - 25);
+			ctxGame.fillText(player.name, player.pos.x - 10 , player.pos.y + 45);
 		});
 
 		// วาด bullets
