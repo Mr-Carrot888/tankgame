@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
-	const socket = io("http://localhost:5000", { autoConnect: false, transports: ["websocket"] });
+	const socket = io("https://d6cc511b6219.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
 
 function drawCharacter(ctxGame, x, y, angle = 0, color = 'red', SCALE_FACTOR = 0.5) { 
     ctxGame.save();
@@ -289,29 +289,13 @@ function drawCharacter(ctxGame, x, y, angle = 0, color = 'red', SCALE_FACTOR = 0
 		players.forEach(player => {
 			ctxGame.fillStyle = player.color; // กำหนดสีตัวละคร
 			switch (player.shape) {
-				case "circle":
-					// วาดวงกลม
-					ctxGame.beginPath();
-					ctxGame.arc(player.pos.x, player.pos.y, 20, 0, Math.PI * 2);
-					ctxGame.fill();
-					break;
-				case "square":
-					// วาดสี่เหลี่ยม
-					ctxGame.fillRect(player.pos.x - 20, player.pos.y - 20, 40, 40);
-					break;
-				case "triangle":
-					// วาดสามเหลี่ยม
-					ctxGame.beginPath();
-					ctxGame.moveTo(player.pos.x, player.pos.y - 20);
-					ctxGame.lineTo(player.pos.x - 20, player.pos.y + 20);
-					ctxGame.lineTo(player.pos.x + 20, player.pos.y + 20);
-					ctxGame.closePath();
-					ctxGame.fill();
-					break;
+				case "Character":
+				    drawCharacter(ctxGame, player.pos.x, player.pos.y, player.angle || 0, player.color);	
+					break;	
 			}
 			// วาดชื่อ player ไว้เหนือหัว
 			ctxGame.fillStyle = "#000";
-			ctxGame.fillText(player.name, player.pos.x - 10, player.pos.y - 25);
+			ctxGame.fillText(player.name, player.pos.x - 10 , player.pos.y + 45);
 		});
 
 		// วาด bullets
