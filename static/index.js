@@ -27,6 +27,13 @@ document.addEventListener("DOMContentLoaded", function() {
 		direction: "stop"
 	};
 
+	// เก็บ bullets ที่ server ส่งมา (แต่ละ client จะวาด bullets เหมือนกัน)
+	let bullets = [];
+
+	// shooting cooldown (ms)
+	const SHOOT_COOLDOWN = 500; // 0.5s
+	let lastShootTime = 0;
+
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
 	const socket = io("https://d61a118bba47.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
@@ -83,7 +90,9 @@ document.addEventListener("DOMContentLoaded", function() {
 	// รับ state ของเกมจาก server ทุก tick (เช่น ตำแหน่งผู้เล่นทั้งหมด)
 	socket.on("game_update", (data) => {
 		// players = array ของ player objects ที่ server ส่งมา
-		players = data.players;
+		players = data.players || [];
+		// ถ้า server ส่ง bullets ด้วย ให้เก็บไว้เพื่อวาด
+		if (data.bullets) bullets = data.bullets;
 	});
 
 	// ====== UI Events ======
@@ -115,6 +124,23 @@ document.addEventListener("DOMContentLoaded", function() {
 			socket.emit("join_game", me);  // แจ้ง server ว่าเรา join
 			joinedGame();                  // ปิดการแก้ไขตัวละคร
 		}
+	});
+
+	// ====== Shooting: click on canvas to shoot (cooldown 0.5s) ======
+	gameCanvas.addEventListener('click', (e) => {
+		// ต้องเป็นผู้เล่นที่ join แล้ว
+		if (!me.name) return;
+		const now = Date.now();
+		if (now - lastShootTime < SHOOT_COOLDOWN) return; // ยัง cooldown
+		lastShootTime = now;
+
+		// คำนวณพิกัดสัมพัทธ์กับ canvas
+		const rect = gameCanvas.getBoundingClientRect();
+		const x = e.clientX - rect.left;
+		const y = e.clientY - rect.top;
+
+		// ส่งเหตุการณ์ 'shoot' ไปยัง server พร้อมตำแหน่งต้นกำเนิดและสี/owner
+		socket.emit('shoot', { x: x, y: y, color: me.color, owner: me.name });
 	});
 
 	// ====== Loop การวาดเกม ======
@@ -163,6 +189,14 @@ document.addEventListener("DOMContentLoaded", function() {
 			// วาดชื่อ player ไว้เหนือหัว
 			ctxGame.fillStyle = "#000";
 			ctxGame.fillText(player.name, player.pos.x - 10, player.pos.y - 25);
+		});
+
+		// วาด bullets
+		bullets.forEach(b => {
+			ctxGame.fillStyle = b.color || '#000';
+			ctxGame.beginPath();
+			ctxGame.arc(b.pos.x, b.pos.y, b.radius || 5, 0, Math.PI * 2);
+			ctxGame.fill();
 		});
 
 		// เรียกตัวเองใหม่ทุก frame (~60fps)

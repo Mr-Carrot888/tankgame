@@ -1,7 +1,7 @@
-function getContext(canavasId) {
-	const canvas = document.querySelector(canavasId);
+function getContext(canvasId) {
+	const canvas = document.querySelector(canvasId);
+	if (!canvas) return null;
 	const ctx = canvas.getContext("2d");
-
 	return ctx;
 }
 
@@ -15,8 +15,15 @@ document.addEventListener("keyup", function(event) {
 
 let mouse = { x: 0, y: 0, isDown: false };
 document.addEventListener("mousemove", function(event) {
-	mouse.x = event.offsetX; // ใช้ offsetX เพื่อให้ได้ตำแหน่งสัมพัทธ์กับ canvas
-	mouse.y = event.offsetY; // ใช้ offsetY เพื่อให้ได้ตำแหน่งสัมพัทธ์กับ canvas
+	const canvas = document.querySelector('canvas');
+	if (canvas) {
+		const rect = canvas.getBoundingClientRect();
+		mouse.x = event.clientX - rect.left;
+		mouse.y = event.clientY - rect.top;
+	} else {
+		mouse.x = event.offsetX || 0;
+		mouse.y = event.offsetY || 0;
+	}
 });
 document.addEventListener("mousedown", function(event) {
 	mouse.isDown = true; // ตั้งค่าว่าเมาส์กดอยู่
@@ -28,8 +35,15 @@ document.addEventListener("mouseup", function(event) {
 let touch = { x: 0, y: 0, isDown: false };
 document.addEventListener("touchmove", function(event) {
 	const touchEvent = event.touches[0]; // ใช้ touch แรก (นิ้วแรก)
-	touch.x = touchEvent.pageX - ctx.canvas.offsetLeft; // คำนวณตำแหน่งสัมพัทธ์กับ canvas
-	touch.y = touchEvent.pageY - ctx.canvas.offsetTop; // คำนวณตำแหน่งสัมพัทธ์กับ canvas
+	const canvas = document.querySelector('canvas');
+	if (canvas) {
+		const rect = canvas.getBoundingClientRect();
+		touch.x = touchEvent.clientX - rect.left;
+		touch.y = touchEvent.clientY - rect.top;
+	} else {
+		touch.x = touchEvent.pageX || 0;
+		touch.y = touchEvent.pageY || 0;
+	}
 });
 
 export { getContext, keys, mouse, touch };
