@@ -36,7 +36,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
-	const socket = io("https://d61a118bba47.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
+
+	const socket = io("https://62fee51ff560.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
+
 
 	// ===== จัดการ UI ให้เปิด/ปิดตามสถานะการเชื่อมต่อ =====
 	// ฟังก์ชันสำหรับปรับสถานะปุ่มต่างๆในหน้าเว็บ
@@ -188,7 +190,10 @@ document.addEventListener("DOMContentLoaded", function() {
 			}
 			// วาดชื่อ player ไว้เหนือหัว
 			ctxGame.fillStyle = "#000";
+			ctxGame.textAlign = "center";
+			ctxGame.font = "14px Arial";
 			ctxGame.fillText(player.name, player.pos.x - 10, player.pos.y - 25);
+			ctxGame.fillText(`Score: ${player.score}`, player.pos.x, player.pos.y - 45);
 		});
 
 		// วาด bullets
