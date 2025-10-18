@@ -29,6 +29,10 @@ socketio = SocketIO(
 # ===== Background game loop =====
 # ตัวแปร flag สำหรับเริ่ม loop อัพเดทเกม
 is_start_game_update = False
+# ===== Background game loop =====
+# ===== Background game loop =====
+# ตัวแปร flag สำหรับเริ่ม loop อัพเดทเกม
+is_start_game_update = False
 def game_update():
 	# tickrate = server update rate (จำนวนครั้งที่อัพเดทต่อวินาที)
 	TICK_RATE = 1.0 / 60.0  # 60 updates/sec
@@ -37,8 +41,8 @@ def game_update():
 	while True:
 		socketio.sleep(TICK_RATE)  # รอเวลาตาม tickrate
 		_players = []
-		for sid, player in players.items():
-			# อัพเดทตำแหน่งผู้เล่นตาม direction (มีเช็คขอบเขต canvas ด้วย)
+		# ===== อัพเดทตำแหน่งผู้เล่น =====
+		for sid, player in list(players.items()):
 			if player['direction'] == 'up' and player['pos']['y'] > 0:
 				player['pos']['y'] -= move_speed
 			elif player['direction'] == 'down' and player['pos']['y'] < canvasHeight:
@@ -47,22 +51,38 @@ def game_update():
 				player['pos']['x'] -= move_speed
 			elif player['direction'] == 'right' and player['pos']['x'] < canvasWidth:
 				player['pos']['x'] += move_speed
-			# เพิ่มข้อมูลผู้เล่นลงใน list สำหรับ broadcast
+				
 			_players.append(player)
 
-		# อัพเดทตำแหน่ง bullets
-		# bullet speed ถูกตั้งเป็น vel (pixel per tick) เมื่อสร้าง
+		# ===== อัพเดทตำแหน่ง bullets และตรวจสอบการชนกับผู้เล่น =====
 		new_bullets = []
 		for b in bullets:
+			# อัพเดทตำแหน่งกระสุน
 			b['pos']['x'] += b['vel']['x']
 			b['pos']['y'] += b['vel']['y']
-			# เก็บไว้ถ้ายังอยู่ในขอบเขต canvas
+
+			# ตรวจสอบการชนกับผู้เล่นอื่น (ไม่รวมเจ้าของกระสุน)
+			for sid, player in list(players.items()):
+				if sid != b['owner_sid']:
+					dx = b['pos']['x'] - player['pos']['x']
+					dy = b['pos']['y'] - player['pos']['y']
+					distance = (dx**2 + dy**2)**0.5
+					if distance < 20:  # ระยะชน (ตัวละครขนาด ~40px)
+						print(f"Player {sid} ถูกยิงโดย {b['owner_sid']} แล้ว disconnect")
+						# ตัดการเชื่อมต่อ client ที่โดนยิง
+						socketio.server.disconnect(sid)
+						# ลบผู้เล่นออกจาก dict ด้วย (กันหลุดไม่สมบูรณ์)
+						players.pop(sid, None)
+						break  # ไม่ต้องตรวจสอบต่อ
+
+			# เก็บ bullet ถ้ายังอยู่ในขอบเขต canvas
 			if 0 <= b['pos']['x'] <= canvasWidth and 0 <= b['pos']['y'] <= canvasHeight:
 				new_bullets.append(b)
+
 		# อัพเดท bullets list
 		bullets[:] = new_bullets
 
-		# ส่งข้อมูลผู้เล่นและ bullets ไปยังทุก client (broadcast)
+		# ===== ส่งข้อมูลผู้เล่นและ bullets ไปยังทุก client =====
 		socketio.emit('game_update', { 'players': _players, 'bullets': bullets })
 
 # ===== Built-in events =====
