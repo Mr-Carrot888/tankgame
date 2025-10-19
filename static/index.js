@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
 
-	const socket = io("https://62fee51ff560.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
+	const socket = io("https://bb8d7dd0fbe1.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
 
 
 	// ===== จัดการ UI ให้เปิด/ปิดตามสถานะการเชื่อมต่อ =====
