@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
 
-	const socket = io("https://d91a432137b9.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
+	const socket = io("https://9c9da0cda61b.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
 
 function drawCharacter(ctxGame, x, y, angle = 0, color = 'red', SCALE_FACTOR = 0.5) { 
     ctxGame.save();
