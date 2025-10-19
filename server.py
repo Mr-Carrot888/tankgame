@@ -60,7 +60,11 @@ def game_update():
 			# อัพเดทตำแหน่งกระสุน
 			b['pos']['x'] += b['vel']['x']
 			b['pos']['y'] += b['vel']['y']
+
 			hit = False
+
+
+
 			# ตรวจสอบการชนกับผู้เล่นอื่น (ไม่รวมเจ้าของกระสุน)
 			for sid, player in list(players.items()):
 				if sid != b['owner_sid']:
@@ -70,6 +74,7 @@ def game_update():
 					if distance < 20:  # ระยะชน (ตัวละครขนาด ~40px)
 						print(f"Player {sid} ถูกยิงโดย {b['owner_sid']} แล้ว disconnect")
 						# ตัดการเชื่อมต่อ client ที่โดนยิง
+
 						owner_sid = b['owner_sid']
 						if owner_sid in players:
 							players[owner_sid]['score'] += 1
@@ -88,6 +93,7 @@ def game_update():
 			if 0 <= b['pos']['x'] <= canvasWidth and 0 <= b['pos']['y'] <= canvasHeight:
 				new_bullets.append(b)
 			'''
+
 		# อัพเดท bullets list
 		bullets[:] = new_bullets
 
