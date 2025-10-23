@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
 
-	const socket = io("https://c4c66af29c3a.ngrok-free.app", { autoConnect: false, transports: ["websocket"] })
+	const socket = io("https://21f82c4bf9e9.ngrok-free.app", { autoConnect: false, transports: ["websocket"] })
 
 	// วาดตัวละคร
 function drawjellyfish(ctxGame, x, y, angle = 0, color = 'purple', SCALE_FACTOR = 0.5) {
