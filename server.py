@@ -154,8 +154,13 @@ def handle_join_game(data):
 def handle_move(data):
 	if request.sid in players:
 		players[request.sid]['direction'] = data['direction']
-		print('Player moved', request.sid, players[request.sid])
-
+# (NEW) angle_update: อัพเดทมุมผู้เล่น (รับจาก client)
+@socketio.on('angle_update')
+def handle_angle_update(data):
+  if request.sid in players and 'angle' in data:
+   # อัพเดทมุมของผู้เล่นทันที
+   players[request.sid]['angle'] = float(data['angle'])
+      # ไม่ต้อง emit ทันที เพราะ game_update loop (60 FPS) จะส่งข้อมูลทั้งหมดไปเอง
 
 # shoot: สร้าง projectile เมื่อผู้เล่นยิง (client จะส่งพิกัดเป้าหมาย)
 @socketio.on('shoot')
