@@ -61,6 +61,10 @@ def game_update():
 			b['pos']['x'] += b['vel']['x']
 			b['pos']['y'] += b['vel']['y']
 
+			hit = False
+
+
+
 			# ตรวจสอบการชนกับผู้เล่นอื่น (ไม่รวมเจ้าของกระสุน)
 			for sid, player in list(players.items()):
 				if sid != b['owner_sid']:
@@ -70,14 +74,25 @@ def game_update():
 					if distance < 20:  # ระยะชน (ตัวละครขนาด ~40px)
 						print(f"Player {sid} ถูกยิงโดย {b['owner_sid']} แล้ว disconnect")
 						# ตัดการเชื่อมต่อ client ที่โดนยิง
+
+						owner_sid = b['owner_sid']
+						if owner_sid in players:
+							players[owner_sid]['score'] += 1
+							print(f"Player {owner_sid} ได้ 1 คะแนน! (Score: {players[owner_sid]['score']})") #nampu
+						# <--- จบการเพิ่มตรงนี้
 						socketio.server.disconnect(sid)
 						# ลบผู้เล่นออกจาก dict ด้วย (กันหลุดไม่สมบูรณ์)
 						players.pop(sid, None)
+						hit = True
 						break  # ไม่ต้องตรวจสอบต่อ
-
+				
+			if not hit and 0 <= b['pos']['x'] <= canvasWidth and 0 <= b['pos']['y'] <= canvasHeight: # <--- แก้ไขตรงนี้
+				new_bullets.append(b)
 			# เก็บ bullet ถ้ายังอยู่ในขอบเขต canvas
+			'''
 			if 0 <= b['pos']['x'] <= canvasWidth and 0 <= b['pos']['y'] <= canvasHeight:
 				new_bullets.append(b)
+			'''
 
 		# อัพเดท bullets list
 		bullets[:] = new_bullets
@@ -129,7 +144,8 @@ def handle_join_game(data):
 		'color': data['color'],
 		'shape': data['shape'],
 		'pos': { 'x': int(data['pos'].get('x')), 'y': int(data['pos'].get('y')) },
-		'direction': data['direction']
+		'direction': data['direction'],
+		'score': 0
 	}
 	print('Player joined', request.sid, players[request.sid])
 

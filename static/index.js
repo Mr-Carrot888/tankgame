@@ -38,7 +38,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
-	const socket = io("https://c4c66af29c3a.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
+
+	const socket = io("https://c4c66af29c3a.ngrok-free.app", { autoConnect: false, transports: ["websocket"] })
 
 	// วาดตัวละคร
 function drawjellyfish(ctxGame, x, y, angle = 0, color = 'purple', SCALE_FACTOR = 0.5) {
@@ -419,6 +420,7 @@ function drawMonster(ctxGame, x, y, angle = 0, color = 'darkred', SCALE_FACTOR =
     ctxGame.restore();
 }
 
+
 	// ===== จัดการ UI ให้เปิด/ปิดตามสถานะการเชื่อมต่อ =====
 	// ฟังก์ชันสำหรับปรับสถานะปุ่มต่างๆในหน้าเว็บ
 	function UIUpdate(isConnected = false) {
@@ -570,7 +572,12 @@ function drawMonster(ctxGame, x, y, angle = 0, color = 'darkred', SCALE_FACTOR =
 			}
 			// วาดชื่อ player ไว้เหนือหัว
 			ctxGame.fillStyle = "#000";
-			ctxGame.fillText(player.name, player.pos.x - 10 , player.pos.y + 45);
+
+			ctxGame.textAlign = "center";
+			ctxGame.font = "14px Arial";
+			ctxGame.fillText(player.name, player.pos.x - 10, player.pos.y - 25);
+			ctxGame.fillText(`Score: ${player.score}`, player.pos.x, player.pos.y - 45);
+
 		});
 
 		// วาด bullets
