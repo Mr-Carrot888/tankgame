@@ -17,6 +17,8 @@ document.addEventListener("DOMContentLoaded", function() {
 	const colorPicker = document.getElementById("color");          // เลือกสีตัวละคร
 	const ctxGame = gameCanvas.getContext("2d");                   // context สำหรับวาดบน canvas
 
+	
+
 	// ===== เก็บ state ของเกม =====
 	let players = [];  // ผู้เล่นทั้งหมด (server broadcast มาให้ทุกคน)
 	let me = {         // ข้อมูล player ของเราเอง
@@ -24,7 +26,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		color: "",
 		shape: "",
 		pos: { x: 0, y: 0 },
-		direction: "stop"
+		direction: "stop",
 	};
 
 	// เก็บ bullets ที่ server ส่งมา (แต่ละ client จะวาด bullets เหมือนกัน)
@@ -36,127 +38,383 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
-	const socket = io("https://d91a432137b9.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
+	const socket = io("https://cff042c649fd.ngrok-free.app", { autoConnect: false, transports: ["websocket"] });
 
-function drawCharacter(ctxGame, x, y, angle = 0, color = 'red', SCALE_FACTOR = 0.5) { 
+	// วาดตัวละคร
+function drawjellyfish(ctxGame, x, y, angle = 0, color = 'purple', SCALE_FACTOR = 0.5) {
     ctxGame.save();
-    ctxGame.translate(x, y); 
-    ctxGame.rotate(angle); 
+    ctxGame.translate(x, y);
+    ctxGame.rotate(angle);
 
-    const headRadius = 25 * SCALE_FACTOR; 
-    const skinColor = "#e0b28f";
-    const shoulderColor = "#333";
-    const gunRotation = -Math.PI / 2; 
+    const headRadius = 25 * SCALE_FACTOR;
+    const eyeRadius = 4 * SCALE_FACTOR;
+    const tentacleLength = 30 * SCALE_FACTOR;
+    const tentacleWidth = 6 * SCALE_FACTOR;
 
-    ctxGame.save();
-    ctxGame.rotate(gunRotation); 
-
-    const gunW = 40 * SCALE_FACTOR; 
-    const gunH = 16 * SCALE_FACTOR;
-    const gunLocalX = headRadius + (4 * SCALE_FACTOR); 
-    const gunLocalY = -gunH / 2;     
-
-    const barrelW = 22 * SCALE_FACTOR, barrelH = 8 * SCALE_FACTOR; 
-    ctxGame.fillStyle = "#333";
+    // --- 1. วาดหัว (วงกลม) ---
+    ctxGame.beginPath();
+    ctxGame.fillStyle = color;
     ctxGame.strokeStyle = "black";
-    ctxGame.lineWidth = 2 * SCALE_FACTOR; 
-    ctxGame.fillRect(gunLocalX, gunLocalY, gunW, gunH); 
-    ctxGame.strokeRect(gunLocalX, gunLocalY, gunW, gunH);
-    ctxGame.fillRect(gunLocalX + gunW, gunLocalY + (gunH - barrelH)/2, barrelW, barrelH);
-    ctxGame.strokeRect(gunLocalX + gunW, gunLocalY + (gunH - barrelH)/2, barrelW, barrelH);
-
-    ctxGame.restore(); 
-
-    // ------------------------------------------ คำนวณตำแหน่ง "มือ" (Hand World Coordinates) ------------------------------------------
-    
-    // จุดจับบนปืนใน local coordinates ก่อนหมุน
-    const gripLow_local_x = gunLocalX + (8 * SCALE_FACTOR);     
-    const gripHigh_local_x = gunLocalX + gunW - (8 * SCALE_FACTOR); 
-    const gripY_local = gunLocalY + (gunH / 2); 
-
-    // มือขวา (Right Hand) -> จับจุดสูงกว่า
-    const handWorldX_R = Math.cos(gunRotation) * gripHigh_local_x - Math.sin(gunRotation) * gripY_local + 3;
-    const handWorldY_R = Math.sin(gunRotation) * gripHigh_local_x + Math.cos(gunRotation) * gripY_local - 1;
-    
-    // มือซ้าย (Left Hand) -> จับจุดต่ำกว่า
-    const handWorldX_L = Math.cos(gunRotation) * gripLow_local_x - Math.sin(gunRotation) * gripY_local - 3;
-    const handWorldY_L = Math.sin(gunRotation) * gripLow_local_x + Math.cos(gunRotation) * gripY_local;
-
-
-    // ------------------------------------------ วาดแขนและมือ (Arms and Hands) ------------------------------------------
-    
-    const armStartX_R = headRadius + (6 * SCALE_FACTOR); 
-    const armStartY_R = 10 * SCALE_FACTOR; 
-    const armStartX_L = -headRadius - (6 * SCALE_FACTOR); 
-    const armStartY_L = 10 * SCALE_FACTOR;
-
-    // Control Points สำหรับเส้นโค้ง
-    const cpX_R = headRadius + (30 * SCALE_FACTOR);
-    const cpY_R = 10 * SCALE_FACTOR;             
-    const cpX_L = -headRadius - (30 * SCALE_FACTOR); 
-    const cpY_L = 10 * SCALE_FACTOR;              
-
-    // วาดแขนขวา
-    ctxGame.save();
-    ctxGame.lineWidth = 6 * SCALE_FACTOR;
-    ctxGame.lineCap = "round";
-    ctxGame.strokeStyle = skinColor;
-    ctxGame.beginPath();
-    ctxGame.moveTo(armStartX_R, armStartY_R);
-    ctxGame.quadraticCurveTo(cpX_R, cpY_R, handWorldX_R, handWorldY_R);
-    ctxGame.stroke();
-
-    // วาดมือขวา
-    ctxGame.beginPath();
-    ctxGame.fillStyle = skinColor;
-    ctxGame.arc(handWorldX_R, handWorldY_R, 6 * SCALE_FACTOR, 0, Math.PI * 2); 
-    ctxGame.fill();
-    ctxGame.strokeStyle = "black";
-    ctxGame.lineWidth = 1 * SCALE_FACTOR; 
-    ctxGame.stroke();
-    ctxGame.restore();
-
-    // วาดแขนซ้าย
-    ctxGame.save();
-    ctxGame.lineWidth = 6 * SCALE_FACTOR;
-    ctxGame.lineCap = "round";
-    ctxGame.strokeStyle = skinColor;
-    ctxGame.beginPath();
-    ctxGame.moveTo(armStartX_L, armStartY_L);
-    ctxGame.quadraticCurveTo(cpX_L, cpY_L, handWorldX_L, handWorldY_L);
-    ctxGame.stroke();
-
-    // วาดมือซ้าย
-    ctxGame.beginPath();
-    ctxGame.fillStyle = skinColor;
-    ctxGame.arc(handWorldX_L, handWorldY_L, 6 * SCALE_FACTOR, 0, Math.PI * 2); 
-    ctxGame.fill();
-    ctxGame.strokeStyle = "black";
-    ctxGame.lineWidth = 1 * SCALE_FACTOR;
-    ctxGame.stroke();
-    ctxGame.restore();
-
-
-    // ------------------------------------------ หัว, ตา, ไหล่ ------------------------------------------
-    
-    // หัว
-    ctxGame.beginPath();
-    ctxGame.fillStyle = color; 
-    ctxGame.strokeStyle = "black";
-    ctxGame.lineWidth = 3 * SCALE_FACTOR;
+    ctxGame.lineWidth = 2 * SCALE_FACTOR;
     ctxGame.arc(0, 0, headRadius, 0, Math.PI * 2);
     ctxGame.fill();
     ctxGame.stroke();
 
-    // ตา
-    ctxGame.fillStyle = "black";
-    ctxGame.beginPath(); ctxGame.arc(-8 * SCALE_FACTOR, -8 * SCALE_FACTOR, 3 * SCALE_FACTOR, 0, Math.PI * 2); ctxGame.fill(); 
-    ctxGame.beginPath(); ctxGame.arc(8 * SCALE_FACTOR, -8 * SCALE_FACTOR, 3 * SCALE_FACTOR, 0, Math.PI * 2); ctxGame.fill();
+    // --- 2. วาดหนวด (tentacles) ด้านล่าง ---
+    ctxGame.strokeStyle = color;
+    ctxGame.lineWidth = tentacleWidth;
+    ctxGame.lineCap = "round";
 
-    // ไหล่ (Shoulders)
-    ctxGame.fillStyle = shoulderColor;
-    ctxGame.beginPath(); ctxGame.arc(armStartX_R, armStartY_R, 8 * SCALE_FACTOR, 0, Math.PI * 2); ctxGame.fill(); ctxGame.stroke(); 
-    ctxGame.beginPath(); ctxGame.arc(armStartX_L, armStartY_L, 8 * SCALE_FACTOR, 0, Math.PI * 2); ctxGame.fill(); ctxGame.stroke(); 
+    const tentacleCount = 5;
+    const spacing = 8 * SCALE_FACTOR;
+                
+    for (let i = -Math.floor(tentacleCount / 2); i <= Math.floor(tentacleCount / 2); i++) {
+        const startX = i * spacing;
+        const startY = headRadius;
+                    
+        // จุดควบคุม (เพื่อสร้างส่วนโค้ง)
+        // โค้งออกด้านนอกเล็กน้อย 
+        const controlX = startX + (i * 5 * SCALE_FACTOR); 
+        const controlY = startY + (tentacleLength * 0.5); 
+                    
+        const endX = startX;
+        const endY = startY + tentacleLength;
+                    
+        ctxGame.beginPath();
+        ctxGame.moveTo(startX, startY);
+                    
+        // ใช้ quadraticCurveTo เพื่อให้หนวดโค้งงอนิดนึง
+        ctxGame.quadraticCurveTo(
+            controlX, 
+            controlY, 
+            endX + (i * 2 * SCALE_FACTOR), // ปรับ EndX เล็กน้อยเพื่อให้ดูโค้งมากขึ้น
+            endY
+        );
+        ctxGame.stroke();
+    }
+                
+    // --- 3. วาดตา ---
+    ctxGame.fillStyle = "white";
+    ctxGame.beginPath(); ctxGame.arc(-8 * SCALE_FACTOR, -8 * SCALE_FACTOR, eyeRadius, 0, Math.PI * 2); ctxGame.fill();
+    ctxGame.beginPath(); ctxGame.arc(8 * SCALE_FACTOR, -8 * SCALE_FACTOR, eyeRadius, 0, Math.PI * 2); ctxGame.fill();
+    ctxGame.fillStyle = "black";
+    ctxGame.beginPath(); ctxGame.arc(-8 * SCALE_FACTOR, -8 * SCALE_FACTOR, eyeRadius / 2, 0, Math.PI * 2); ctxGame.fill();
+    ctxGame.beginPath(); ctxGame.arc(8 * SCALE_FACTOR, -8 * SCALE_FACTOR, eyeRadius / 2, 0, Math.PI * 2); ctxGame.fill();
+                
+    ctxGame.restore();
+}
+
+
+function drawmouse(ctxGame, x, y, angle = 0, fillColor = 'gray', lineColor = 'black', SCALE_FACTOR = 0.5) {
+    ctxGame.save();
+    ctxGame.translate(x, y);
+    ctxGame.rotate(angle);
+
+    ctxGame.strokeStyle = lineColor;
+    ctxGame.lineWidth = 2 * SCALE_FACTOR;
+    ctxGame.lineCap = "round";
+    ctxGame.lineJoin = "round";
+
+    const headRadius = 25 * SCALE_FACTOR;
+    // ขนาดหูใหม่ (เป็นวงรีหรือหยดน้ำที่เรียบง่าย)
+    const earWidth = 20 * SCALE_FACTOR;
+    const earHeight = 28 * SCALE_FACTOR; // หูสูงกว่ากว้างเล็กน้อย
+    const earOffsetFromCenter = 18 * SCALE_FACTOR; // ระยะห่างจากกึ่งกลางหัวไปด้านข้างของหู
+    const earOffsetY = -headRadius - earHeight * 0.4; // เลื่อนหูขึ้นไปด้านบนเล็กน้อย
+
+    const eyeRadius = 3 * SCALE_FACTOR;
+    const whiskerLength = 20 * SCALE_FACTOR;
+    const whiskerSpacing = 5 * SCALE_FACTOR;
+    const mouthWidth = 10 * SCALE_FACTOR;
+    const whiskerStartX = 8 * SCALE_FACTOR;
+    const whiskerStartY = 5 * SCALE_FACTOR;
+
+    // --- 1. วาดหู (อยู่ด้านหลังหัว - ต้องวาดก่อนหัว) ---
+    // หูซ้าย (รูปหยดน้ำ/วงรี)
+    ctxGame.beginPath();
+    // ใช้ ellipse เพื่อวาดวงรี หรือจะใช้ bezierCurveTo เพื่อสร้างรูปหยดน้ำ
+    // ตอนนี้จะลองใช้ ellipse ก่อนเพื่อให้เรียบง่ายตามภาพ
+    ctxGame.ellipse(
+        -earOffsetFromCenter, // ตำแหน่ง X ของจุดศูนย์กลางวงรี
+        earOffsetY,           // ตำแหน่ง Y ของจุดศูนย์กลางวงรี
+        earWidth / 2,         // รัศมีแกน X
+        earHeight / 2,        // รัศมีแกน Y
+        0,                    // Rotation (ไม่หมุน)
+        0,                    // Start angle
+        Math.PI * 2           // End angle
+    );
+    ctxGame.fillStyle = fillColor;
+    ctxGame.fill();
+    ctxGame.stroke();
+
+    // หูขวา (รูปหยดน้ำ/วงรี)
+    ctxGame.beginPath();
+    ctxGame.ellipse(
+        earOffsetFromCenter, // ตำแหน่ง X ของจุดศูนย์กลางวงรี
+        earOffsetY,          // ตำแหน่ง Y ของจุดศูนย์กลางวงรี
+        earWidth / 2,        // รัศมีแกน X
+        earHeight / 2,       // รัศมีแกน Y
+        0,                   // Rotation
+        0,                   // Start angle
+        Math.PI * 2          // End angle
+    );
+    ctxGame.fillStyle = fillColor;
+    ctxGame.fill();
+    ctxGame.stroke();
+
+    // --- 2. วาดหัว (วงกลม) ---
+    ctxGame.beginPath();
+    ctxGame.arc(0, 0, headRadius, 0, Math.PI * 2);
+    ctxGame.fillStyle = fillColor;
+    ctxGame.fill();
+    ctxGame.stroke();
+    
+    // --- 3. วาดตา ---
+    ctxGame.fillStyle = lineColor;
+    ctxGame.beginPath();
+    ctxGame.arc(-8 * SCALE_FACTOR, -8 * SCALE_FACTOR, eyeRadius, 0, Math.PI * 2);
+    ctxGame.fill();
+    ctxGame.beginPath();
+    ctxGame.arc(8 * SCALE_FACTOR, -8 * SCALE_FACTOR, eyeRadius, 0, Math.PI * 2);
+    ctxGame.fill();
+
+    // --- 4. วาดจมูกและปาก ---
+    // จมูก (สามเหลี่ยมคว่ำเล็กๆ)
+    ctxGame.beginPath();
+    ctxGame.moveTo(0, 0);
+    ctxGame.lineTo(-4 * SCALE_FACTOR, 6 * SCALE_FACTOR);
+    ctxGame.lineTo(4 * SCALE_FACTOR, 6 * SCALE_FACTOR);
+    ctxGame.closePath();
+    ctxGame.fillStyle = lineColor;
+    ctxGame.fill();
+    ctxGame.stroke();
+
+    // ปาก (เส้นโค้ง)
+    ctxGame.beginPath();
+    ctxGame.moveTo(0, 6 * SCALE_FACTOR);
+    ctxGame.quadraticCurveTo(-mouthWidth / 2, 12 * SCALE_FACTOR, -headRadius * 0.4, 10 * SCALE_FACTOR);
+    ctxGame.stroke();
+    ctxGame.beginPath();
+    ctxGame.moveTo(0, 6 * SCALE_FACTOR);
+    ctxGame.quadraticCurveTo(mouthWidth / 2, 12 * SCALE_FACTOR, headRadius * 0.4, 10 * SCALE_FACTOR);
+    ctxGame.stroke();
+
+    // --- 5. วาดหนวด ---
+    ctxGame.strokeStyle = lineColor;
+    ctxGame.lineWidth = 1.5 * SCALE_FACTOR;
+
+    const yTop = whiskerStartY - (whiskerSpacing / 2);
+    const yBottom = whiskerStartY + (whiskerSpacing / 2);
+
+    // หนวดซ้าย (2 เส้น)
+    ctxGame.beginPath();
+    ctxGame.moveTo(-whiskerStartX, yTop);
+    ctxGame.lineTo(-whiskerStartX - whiskerLength -5, yTop);
+    ctxGame.stroke();
+
+    ctxGame.beginPath();
+    ctxGame.moveTo(-whiskerStartX, yBottom -2);
+    ctxGame.lineTo(-whiskerStartX - whiskerLength -5, yBottom + 5);
+    ctxGame.stroke();
+
+    // หนวดขวา (2 เส้น)
+    ctxGame.beginPath();
+    ctxGame.moveTo(whiskerStartX, yTop );
+    ctxGame.lineTo(whiskerStartX + whiskerLength + 5, yTop);
+    ctxGame.stroke();
+
+    ctxGame.beginPath();
+    ctxGame.moveTo(whiskerStartX, yBottom -2 );
+    ctxGame.lineTo(whiskerStartX + whiskerLength + 5, yBottom + 5);
+    ctxGame.stroke();
+
+    ctxGame.restore();
+}
+
+function drawRobot(ctxGame, x, y, angle = 0, color = '#a0a0a0', SCALE_FACTOR = 0.65) {
+    ctxGame.save();
+    ctxGame.translate(x, y);
+    ctxGame.rotate(angle);
+
+    const headSize = 40 * SCALE_FACTOR; // ขนาดหัวสี่เหลี่ยม
+    const antennaLength = 20 * SCALE_FACTOR; // ความยาวเสาอากาศ
+    const eyeWidth = 12 * SCALE_FACTOR; // ความกว้างตา LED
+    const eyeHeight = 6 * SCALE_FACTOR; // ความสูงตา LED
+    const mouthWidth = 20 * SCALE_FACTOR; // ความกว้างปาก
+    const mouthHeight = 4 * SCALE_FACTOR; // ความสูงปาก
+
+    ctxGame.strokeStyle = "black";
+    ctxGame.lineWidth = 2 * SCALE_FACTOR;
+    ctxGame.fillStyle = color;
+
+    // --- 1. Head (หัว) - Square/Box ---
+    ctxGame.fillRect(-headSize / 2, -headSize / 2, headSize, headSize);
+    ctxGame.strokeRect(-headSize / 2, -headSize / 2, headSize, headSize);
+
+    // --- 2. Antenna (เสาอากาศ) - อยู่ด้านบนหัว ---
+    // Line
+    ctxGame.beginPath();
+    ctxGame.moveTo(0, -headSize / 2); // เริ่มจากกึ่งกลางด้านบนของหัว
+    ctxGame.lineTo(0, -headSize / 2 - antennaLength);
+    ctxGame.stroke();
+
+    // Bulb
+    ctxGame.beginPath();
+    ctxGame.arc(0, -headSize / 2 - antennaLength, 4 * SCALE_FACTOR, 0, Math.PI * 2);
+    ctxGame.fillStyle = '#ff4444'; // ไฟแดง
+    ctxGame.fill();
+    ctxGame.stroke();
+    
+    // --- 3. Eyes (ตา) - LED Style ---
+    ctxGame.fillStyle = '#00ff00'; // LED สีเขียว
+    // ตาซ้าย
+    ctxGame.fillRect(-headSize / 4 - eyeWidth / 2, -headSize / 4 - eyeHeight / 2, eyeWidth, eyeHeight);
+    ctxGame.strokeRect(-headSize / 4 - eyeWidth / 2, -headSize / 4 - eyeHeight / 2, eyeWidth, eyeHeight);
+    // ตาขวา
+    ctxGame.fillRect(headSize / 4 - eyeWidth / 2, -headSize / 4 - eyeHeight / 2, eyeWidth, eyeHeight);
+    ctxGame.strokeRect(headSize / 4 - eyeWidth / 2, -headSize / 4 - eyeHeight / 2, eyeWidth, eyeHeight);
+
+    // --- 4. Mouth (ปาก) - Line ---
+    ctxGame.beginPath();
+    ctxGame.moveTo(-mouthWidth / 2, headSize / 4); // จุดเริ่มต้นปาก
+    ctxGame.lineTo(mouthWidth / 2, headSize / 4); // จุดสิ้นสุดปาก
+    ctxGame.lineWidth = mouthHeight; // ใช้ความสูงเป็นความหนาของเส้น
+    ctxGame.lineCap = "round"; // ให้ปลายเส้นโค้งมน
+    ctxGame.strokeStyle = '#444444'; // สีปาก
+    ctxGame.stroke();
+
+    ctxGame.restore();
+}
+
+function drawMonster(ctxGame, x, y, angle = 0, color = 'darkred', SCALE_FACTOR = 0.35) {
+    ctxGame.save();
+    ctxGame.translate(x, y);
+    ctxGame.rotate(angle);
+
+    const bodyRadius = 35 * SCALE_FACTOR; 
+    const hornLength = 40 * SCALE_FACTOR; 
+    const hornBaseWidth = 12 * SCALE_FACTOR; 
+    const eyeRadius = 15 * SCALE_FACTOR; 
+    const pupilRadius = 5 * SCALE_FACTOR;
+
+    // *** ปรับตำแหน่งปาก (ขยับลงมา) ***
+    const mouthY = bodyRadius * 0.7; // เปลี่ยนจาก 0.4 เป็น 0.7
+    const mouthWidth = bodyRadius * 1.2;
+
+    // *** ปรับตำแหน่งหู (ขยับลงมา) ***
+    const earYOffset = bodyRadius * 0.3; // ตำแหน่ง Y ของหู
+    const earWidth = 10 * SCALE_FACTOR;
+    const earHeight = 20 * SCALE_FACTOR;
+    const earXOffset = bodyRadius * 0.9; // ตำแหน่ง X ของหู (ด้านข้าง)
+                
+    ctxGame.strokeStyle = "black";
+    ctxGame.lineWidth = 2 * SCALE_FACTOR;
+    ctxGame.lineJoin = "round";
+    ctxGame.lineCap = "round";
+                
+    // --- 1. เขา (Horns) ---
+    ctxGame.fillStyle = '#8b4513'; // สีน้ำตาล
+                
+    // เขาซ้าย
+    ctxGame.beginPath();
+    ctxGame.moveTo(-bodyRadius * 0.6, -bodyRadius * 0.8); 
+    ctxGame.quadraticCurveTo(
+        -bodyRadius * 1.5, -bodyRadius * 1.8, 
+        -bodyRadius * 0.5, -bodyRadius * 0.8 - hornLength 
+    );
+    ctxGame.lineTo(-bodyRadius * 0.6 + hornBaseWidth / 2, -bodyRadius * 0.8); 
+    ctxGame.closePath();
+    ctxGame.fill();
+    ctxGame.stroke();
+
+    // เขาขวา
+    ctxGame.beginPath();
+    ctxGame.moveTo(bodyRadius * 0.6, -bodyRadius * 0.8); 
+    ctxGame.quadraticCurveTo(
+        bodyRadius * 1.5, -bodyRadius * 1.8, 
+        bodyRadius * 0.5, -bodyRadius * 0.8 - hornLength 
+    );
+    ctxGame.lineTo(bodyRadius * 0.6 - hornBaseWidth / 2, -bodyRadius * 0.8); 
+    ctxGame.closePath();
+    ctxGame.fill();
+    ctxGame.stroke();
+                
+    // --- 2. ลำตัว/หัว (Body/Head) ---
+    ctxGame.beginPath();
+    ctxGame.arc(0, 0, bodyRadius, 0, Math.PI * 2);
+    ctxGame.fillStyle = color;
+    ctxGame.fill();
+    ctxGame.stroke();
+
+    // --- 3. ตาเดียว (Cyclops Eye) ---
+    // Sclera (ขาว)
+    ctxGame.beginPath();
+    ctxGame.arc(0, 0, eyeRadius, 0, Math.PI * 2);
+    ctxGame.fillStyle = "white";
+    ctxGame.fill();
+    ctxGame.stroke();
+
+    // Iris (ม่านตา - เขียว)
+    ctxGame.beginPath();
+    ctxGame.arc(0, 0, eyeRadius * 0.6, 0, Math.PI * 2);
+    ctxGame.fillStyle = "lime";
+    ctxGame.fill();
+                
+    // Pupil (รูม่านตา - ดำ)
+    ctxGame.beginPath();
+    ctxGame.arc(0, 0, pupilRadius, 0, Math.PI * 2);
+    ctxGame.fillStyle = "black";
+    ctxGame.fill();
+                
+    // --- 4. ปาก (Mouth) - ฟันแหลม (ใช้ mouthY ใหม่)
+    ctxGame.beginPath();
+    ctxGame.arc(0, mouthY, mouthWidth / 2, 0, Math.PI, false); // ส่วนโค้งปาก
+    ctxGame.fillStyle = "black";
+    ctxGame.fill();
+                
+    // ฟัน
+    ctxGame.fillStyle = "white";
+    const toothCount = 5;
+    const toothBase = mouthWidth / toothCount;
+    for (let i = 0; i < toothCount; i++) {
+        const tX = -mouthWidth / 2 + (i * toothBase);
+        ctxGame.beginPath();
+        ctxGame.moveTo(tX, mouthY);
+        ctxGame.lineTo(tX + toothBase / 2, mouthY - 8 * SCALE_FACTOR);
+        ctxGame.lineTo(tX + toothBase, mouthY);
+        ctxGame.fill();
+        ctxGame.stroke();
+    }
+
+    // --- 5. หู (Ears) - ขยับลงมาอยู่ด้านข้างล่าง ---
+    ctxGame.fillStyle = color;
+    // หูซ้าย
+    ctxGame.beginPath();
+    ctxGame.ellipse(
+        -earXOffset,
+        earYOffset, // ใช้ earYOffset ใหม่
+        earWidth,
+        earHeight,
+        Math.PI / 4, // เอียงเล็กน้อย
+        0,
+        Math.PI * 2
+    );
+    ctxGame.fill();
+    ctxGame.stroke();
+
+    // หูขวา
+    ctxGame.beginPath();
+    ctxGame.ellipse(
+        earXOffset,
+        earYOffset, // ใช้ earYOffset ใหม่
+        earWidth,
+        earHeight,
+        -Math.PI / 4, // เอียงเล็กน้อย
+        0,
+        Math.PI * 2
+    );
+    ctxGame.fill();
+    ctxGame.stroke();
 
     ctxGame.restore();
 }
@@ -262,8 +520,16 @@ function drawCharacter(ctxGame, x, y, angle = 0, color = 'red', SCALE_FACTOR = 0
 		const x = e.clientX - rect.left;
 		const y = e.clientY - rect.top;
 
+		// คำนวณมุมที่ชี้จากผู้เล่นไปยังเป้าหมาย (ในหน่วยเรเดียน)
+    	const deltaX = x - me.pos.x;
+    	const deltaY = y - me.pos.y;
+    	const angle = Math.atan2(deltaY, deltaX);
+
+		// อัปเดตมุมของ player 'me' ทันที (เพื่อให้เห็นการหมุนก่อน Server ตอบกลับ)
+    	me.angle = angle;
+
 		// ส่งเหตุการณ์ 'shoot' ไปยัง server พร้อมตำแหน่งต้นกำเนิดและสี/owner
-		socket.emit('shoot', { x: x, y: y, color: me.color, owner: me.name });
+		socket.emit('shoot', { x: x, y: y, color: me.color, owner: me.name, angle: angle });
 	});
 
 	// ====== Loop การวาดเกม ======
@@ -289,8 +555,17 @@ function drawCharacter(ctxGame, x, y, angle = 0, color = 'red', SCALE_FACTOR = 0
 		players.forEach(player => {
 			ctxGame.fillStyle = player.color; // กำหนดสีตัวละคร
 			switch (player.shape) {
-				case "Character":
-				    drawCharacter(ctxGame, player.pos.x, player.pos.y, player.angle || 0, player.color);	
+				case "mouse":
+				    drawmouse(ctxGame, player.pos.x, player.pos.y, player.angle || 0, player.color);	
+					break;	
+				case "jellyfish":
+				    drawjellyfish(ctxGame, player.pos.x, player.pos.y, player.angle || 0, player.color);	
+					break;	
+				case "Robot":
+				    drawRobot(ctxGame, player.pos.x, player.pos.y, player.angle || 0, player.color);	
+					break;	
+				case "Monster":
+				    drawMonster(ctxGame, player.pos.x, player.pos.y, player.angle || 0, player.color);	
 					break;	
 			}
 			// วาดชื่อ player ไว้เหนือหัว
