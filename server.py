@@ -3,8 +3,11 @@ import eventlet
 # monkey_patch(): ดัดแปลง socket/threading ของ Python → ให้ async ทำงานได้
 eventlet.monkey_patch()
 
+import math  #JV2
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO
+
+import random #JV2
 
 # เก็บ state ของผู้เล่นทั้งหมด (key = sid ของ client)
 # players = { sid: { name, color, shape, pos{x,y}, direction } }
@@ -18,6 +21,83 @@ canvasHeight = 600
 bullets = []  # list ของ { id, owner_sid, pos: {x,y}, vel: {x,y}, color, radius }
 _bullet_next_id = 1
 
+#JV2
+# <--- 2. เพิ่มรัศมีผู้เล่นและรายการกำแพงทั้งหมด --- 
+PLAYER_RADIUS = 20 # รัศมีผู้เล่น (อ้างอิงจากโค้ดเช็คชนกระสุน)
+
+# คัดลอกพิกัดกำแพง (x, y, w, h) จาก drawBackground() ใน index.js
+WALLS = [
+    # ขอบจอ
+    {'x': 0, 'y': 0, 'w': 800, 'h': 3},   # บน
+    {'x': 0, 'y': 597, 'w': 800, 'h': 3}, # ล่าง
+    {'x': 0, 'y': 0, 'w': 3, 'h': 600},   # ซ้าย
+    {'x': 797, 'y': 0, 'w': 3, 'h': 600}, # ขวา
+
+    # --- แถวบน ---
+    {'x': 90, 'y': 0, 'w': 10, 'h': 150},
+    {'x': 180, 'y': 100, 'w': 190, 'h': 10},
+    {'x': 450, 'y': 0, 'w': 10, 'h': 200},
+    {'x': 600, 'y': 120, 'w': 200, 'h': 10},
+    {'x': 600, 'y': 50, 'w': 10, 'h': 150},
+    # --- แถวกลาง ---
+    {'x': 150, 'y': 280, 'w': 250, 'h': 10},
+    {'x': 140, 'y': 220, 'w': 10, 'h': 110},
+    {'x': 530, 'y': 280, 'w': 150, 'h': 10},
+    {'x': 530, 'y': 200, 'w': 10, 'h': 110},
+    {'x': 0, 'y': 400, 'w': 250, 'h': 10},
+    {'x': 500, 'y': 380, 'w': 300, 'h': 10},
+    # --- แถวล่าง ---
+    {'x': 90, 'y': 490, 'w': 10, 'h': 150},
+    {'x': 400, 'y': 420, 'w': 10, 'h': 180},
+    {'x': 650, 'y': 470, 'w': 10, 'h': 130},
+    {'x': 400, 'y': 500, 'w': 150, 'h': 10},
+    {'x': 180, 'y': 500, 'w': 130, 'h': 10},
+]
+
+# <--- 3. เพิ่มฟังก์ชันเช็คการชน (AABB-Circle) ---
+def check_collision(circle_pos, circle_radius, rect):
+    """
+    ตรวจสอบการชนระหว่างวงกลม (ผู้เล่น/กระสุน) กับสี่เหลี่ยม (กำแพง)
+    """
+    # หาจุดที่ใกล้ที่สุดบนสี่เหลี่ยม จากจุดศูนย์กลางวงกลม
+    closest_x = max(rect['x'], min(circle_pos['x'], rect['x'] + rect['w']))
+    closest_y = max(rect['y'], min(circle_pos['y'], rect['y'] + rect['h']))
+
+    # คำนวณระยะห่างระหว่างจุดที่ใกล้ที่สุด กับจุดศูนย์กลางวงกลม
+    dx = circle_pos['x'] - closest_x
+    dy = circle_pos['y'] - closest_y
+    distance_squared = (dx**2) + (dy**2)
+
+    # ถ้า (ระยะห่าง^2) น้อยกว่า (รัศมี^2) = ชน
+    return distance_squared < (circle_radius**2)
+
+# === ฟังก์ชันสุ่มจุดเกิดปลอดภัย ===
+def get_safe_spawn_position():
+    """สุ่มจุดเกิดที่ไม่ชนกำแพงหรือขอบจอ"""
+    while True:
+        x = random.randint(50, canvasWidth - 50)
+        y = random.randint(50, canvasHeight - 50)
+        spawn_pos = {'x': x, 'y': y}
+
+        # ตรวจชนกับกำแพง
+        collided = False
+        for wall in WALLS:
+            if check_collision(spawn_pos, PLAYER_RADIUS, wall):
+                collided = True
+                break
+
+        # ตรวจห่างจากผู้เล่นอื่น (กันเกิดทับกัน)
+        for p in players.values():
+            dx = spawn_pos['x'] - p['pos']['x']
+            dy = spawn_pos['y'] - p['pos']['y']
+            if (dx**2 + dy**2)**0.5 < PLAYER_RADIUS * 3:
+                collided = True
+                break
+
+        if not collided:
+            return spawn_pos
+#JV2
+
 # ===== สร้าง Flask app และผูกกับ SocketIO =====
 app = Flask(__name__)
 socketio = SocketIO(
@@ -27,78 +107,91 @@ socketio = SocketIO(
 )
 
 # ===== Background game loop =====
-# ตัวแปร flag สำหรับเริ่ม loop อัพเดทเกม
 is_start_game_update = False
-# ===== Background game loop =====
-# ===== Background game loop =====
-# ตัวแปร flag สำหรับเริ่ม loop อัพเดทเกม
-is_start_game_update = False
+
 def game_update():
-	# tickrate = server update rate (จำนวนครั้งที่อัพเดทต่อวินาที)
-	TICK_RATE = 1.0 / 60.0  # 60 updates/sec
-	move_speed = 200 * TICK_RATE  # ความเร็วการเคลื่อนที่ของผู้เล่น (pixel/tick)
+    # tickrate = server update rate (จำนวนครั้งที่อัพเดทต่อวินาที)
+    TICK_RATE = 1.0 / 60.0  # 60 updates/sec
+    move_speed = 200 * TICK_RATE  # ความเร็วการเคลื่อนที่ของผู้เล่น (pixel/tick)
 
-	while True:
-		socketio.sleep(TICK_RATE)  # รอเวลาตาม tickrate
-		_players = []
-		# ===== อัพเดทตำแหน่งผู้เล่น =====
-		for sid, player in list(players.items()):
-			if player['direction'] == 'up' and player['pos']['y'] > 0:
-				player['pos']['y'] -= move_speed
-			elif player['direction'] == 'down' and player['pos']['y'] < canvasHeight:
-				player['pos']['y'] += move_speed
-			elif player['direction'] == 'left' and player['pos']['x'] > 0:
-				player['pos']['x'] -= move_speed
-			elif player['direction'] == 'right' and player['pos']['x'] < canvasWidth:
-				player['pos']['x'] += move_speed
-				
-			_players.append(player)
+    while True:
+        socketio.sleep(TICK_RATE)  # รอเวลาตาม tickrate
 
-		# ===== อัพเดทตำแหน่ง bullets และตรวจสอบการชนกับผู้เล่น =====
-		new_bullets = []
-		for b in bullets:
-			# อัพเดทตำแหน่งกระสุน
-			b['pos']['x'] += b['vel']['x']
-			b['pos']['y'] += b['vel']['y']
+        _players = []
 
-			hit = False
+        # ===== อัพเดทตำแหน่งผู้เล่น =====
+        for sid, player in list(players.items()):
+            next_pos = player['pos'].copy()
+            if player['direction'] == 'up':
+                next_pos['y'] -= move_speed
+            elif player['direction'] == 'down':
+                next_pos['y'] += move_speed
+            elif player['direction'] == 'left':
+                next_pos['x'] -= move_speed
+            elif player['direction'] == 'right':
+                next_pos['x'] += move_speed
 
+            # ตรวจสอบการชนกำแพง
+            is_colliding = False
+            if player['direction'] != 'stop':
+                for wall in WALLS:
+                    if check_collision(next_pos, PLAYER_RADIUS, wall):
+                        is_colliding = True
+                        break
 
+            if not is_colliding:
+                player['pos'] = next_pos
 
-			# ตรวจสอบการชนกับผู้เล่นอื่น (ไม่รวมเจ้าของกระสุน)
-			for sid, player in list(players.items()):
-				if sid != b['owner_sid']:
-					dx = b['pos']['x'] - player['pos']['x']
-					dy = b['pos']['y'] - player['pos']['y']
-					distance = (dx**2 + dy**2)**0.5
-					if distance < 20:  # ระยะชน (ตัวละครขนาด ~40px)
-						print(f"Player {sid} ถูกยิงโดย {b['owner_sid']} แล้ว disconnect")
-						# ตัดการเชื่อมต่อ client ที่โดนยิง
+            _players.append(player)
 
-						owner_sid = b['owner_sid']
-						if owner_sid in players:
-							players[owner_sid]['score'] += 1
-							print(f"Player {owner_sid} ได้ 1 คะแนน! (Score: {players[owner_sid]['score']})") #nampu
-						# <--- จบการเพิ่มตรงนี้
-						socketio.server.disconnect(sid)
-						# ลบผู้เล่นออกจาก dict ด้วย (กันหลุดไม่สมบูรณ์)
-						players.pop(sid, None)
-						hit = True
-						break  # ไม่ต้องตรวจสอบต่อ
-				
-			if not hit and 0 <= b['pos']['x'] <= canvasWidth and 0 <= b['pos']['y'] <= canvasHeight: # <--- แก้ไขตรงนี้
-				new_bullets.append(b)
-			# เก็บ bullet ถ้ายังอยู่ในขอบเขต canvas
-			'''
-			if 0 <= b['pos']['x'] <= canvasWidth and 0 <= b['pos']['y'] <= canvasHeight:
-				new_bullets.append(b)
-			'''
+        # ===== อัพเดทตำแหน่ง bullets และตรวจสอบการชนกับผู้เล่น =====
+        new_bullets = []
+        for b in bullets:
+            b['pos']['x'] += b['vel']['x']
+            b['pos']['y'] += b['vel']['y']
 
-		# อัพเดท bullets list
-		bullets[:] = new_bullets
+            hit = False
 
-		# ===== ส่งข้อมูลผู้เล่นและ bullets ไปยังทุก client =====
-		socketio.emit('game_update', { 'players': _players, 'bullets': bullets })
+            # ชนผู้เล่นอื่น
+            for sid, player in list(players.items()):
+                if sid != b['owner_sid']:
+                    dx = b['pos']['x'] - player['pos']['x']
+                    dy = b['pos']['y'] - player['pos']['y']
+                    distance = (dx**2 + dy**2)**0.5
+                    if distance < 20:
+                        print(f"Player {sid} ถูกยิงโดย {b['owner_sid']} แล้ว disconnect")
+
+                        owner_sid = b['owner_sid']
+                        if owner_sid in players:
+                            players[owner_sid]['score'] += 1
+                            print(f"Player {owner_sid} ได้ 1 คะแนน! (Score: {players[owner_sid]['score']})")
+
+                        try:
+                            socketio.server.disconnect(sid)
+                        except Exception as e:
+                            print(f"disconnect error for {sid}: {e}")
+                        players.pop(sid, None)
+
+                        hit = True
+                        break
+
+            if hit:
+                continue
+
+            # ชนกำแพง
+            for wall in WALLS:
+                if check_collision(b['pos'], b['radius'], wall):
+                    hit = True
+                    break
+
+            if not hit:
+                new_bullets.append(b)
+
+        bullets[:] = new_bullets
+
+        # ===== ส่งข้อมูลผู้เล่นและ bullets ไปยังทุก client =====
+        socketio.emit('game_update', {'players': _players, 'bullets': bullets})
+
 
 # ===== Built-in events =====
 # connect: เรียกเมื่อ client เชื่อมต่อสำเร็จ
@@ -139,15 +232,18 @@ def handle_disconnect():
 @socketio.on('join_game')
 def handle_join_game(data):
 	print(data)
+     
+	safe_pos = get_safe_spawn_position() #JV2
+
 	players[request.sid] = {
 		'name': data['name'],
 		'color': data['color'],
 		'shape': data['shape'],
-		'pos': { 'x': int(data['pos'].get('x')), 'y': int(data['pos'].get('y')) },
+		'pos': safe_pos,  # JV2
 		'direction': data['direction'],
 		'score': 0
 	}
-	print('Player joined', request.sid, players[request.sid])
+	print(f"Player joined {request.sid} at safe spawn {safe_pos}")
 
 # move: อัพเดททิศทางการเคลื่อนที่ของผู้เล่น (รับจาก client)
 @socketio.on('move')
