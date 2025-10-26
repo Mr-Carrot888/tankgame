@@ -39,7 +39,59 @@ document.addEventListener("DOMContentLoaded", function() {
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
 
-	const socket = io("https://21f82c4bf9e9.ngrok-free.app", { autoConnect: false, transports: ["websocket"] })
+	const socket = io("https://a19725ab0b3f.ngrok-free.app", { autoConnect: false, transports: ["websocket"] })
+
+    // --- ส่วนวาดพื้นหลังและลายหญ้า --- // JV2
+    function drawBackground() {
+        // วาดพื้นหลังสีเขียวเข้ม
+        ctxGame.fillStyle = '#5b8a3b';
+        ctxGame.fillRect(0, 0, 800, 600);
+
+        // วาดจุดสีเขียวอ่อนเป็นตาราง (ลายหญ้า)
+        ctxGame.fillStyle = '#89c165';
+        const dotSpacing = 8;
+        const dotSize = 2;
+        for (let y = 0; y < 600; y += dotSpacing) {
+            for (let x = 0; x < 800; x += dotSpacing) {
+                ctxGame.fillRect(x, y, dotSize, dotSize);
+            }
+        }
+
+        // วาดกำแพงขอบจอ (สีน้ำตาลเข้ม)
+        const wallSize = 3;
+        ctxGame.fillStyle = '#5c2600ff';
+        ctxGame.fillRect(0, 0, 800, wallSize); // บน
+        ctxGame.fillRect(0, 600 - wallSize, 800, wallSize); // ล่าง
+        ctxGame.fillRect(0, 0, wallSize, 600); // ซ้าย
+        ctxGame.fillRect(800 - wallSize, 0, wallSize, 600); // ขวา
+
+        // ตั้งค่าสำหรับวาดกำแพงกำบัง (สีน้ำตาล + ขอบเข้ม)
+        ctxGame.fillStyle = '#6b2d04ff';
+        ctxGame.strokeStyle = '#401a02';
+        ctxGame.lineWidth = 2;
+
+        // วาดกำแพงกำบังทั้งหมด (วาดสี + วาดขอบ)
+        // (ตำแหน่งกำแพงตามที่คุณออกแบบ)
+        // --- แถวบน ---
+        ctxGame.fillRect(90, 0, 10, 150); ctxGame.strokeRect(90, 0, 10, 150);
+        ctxGame.fillRect(180, 100, 190, 10); ctxGame.strokeRect(180, 100, 190, 10);
+        ctxGame.fillRect(450, 0, 10, 200); ctxGame.strokeRect(450, 0, 10, 200);
+        ctxGame.fillRect(600, 120, 200, 10); ctxGame.strokeRect(600, 120, 200, 10);
+        ctxGame.fillRect(600, 50, 10, 150); ctxGame.strokeRect(600, 50, 10, 150);
+        // --- แถวกลาง ---
+        ctxGame.fillRect(150, 280, 250, 10); ctxGame.strokeRect(150, 280, 250, 10);
+        ctxGame.fillRect(140, 220, 10, 110); ctxGame.strokeRect(140, 220, 10, 110);
+        ctxGame.fillRect(530, 280, 150, 10); ctxGame.strokeRect(530, 280, 150, 10);
+        ctxGame.fillRect(530, 200, 10, 110); ctxGame.strokeRect(530, 200, 10, 110);
+        ctxGame.fillRect(0, 400, 250, 10); ctxGame.strokeRect(0, 400, 250, 10);
+        ctxGame.fillRect(500, 380, 300, 10); ctxGame.strokeRect(500, 380, 300, 10);
+        // --- แถวล่าง ---
+        ctxGame.fillRect(90, 490, 10, 150); ctxGame.strokeRect(90, 490, 10, 150);
+        ctxGame.fillRect(400, 420, 10, 180); ctxGame.strokeRect(400, 420, 10, 180);
+        ctxGame.fillRect(650, 470, 10, 130); ctxGame.strokeRect(650, 470, 10, 130);
+        ctxGame.fillRect(400, 500, 150, 10); ctxGame.strokeRect(400, 500, 150, 10);
+        ctxGame.fillRect(180, 500, 130, 10); ctxGame.strokeRect(180, 500, 130, 10);
+    } // JV2
 
 	// วาดตัวละคร
 function drawjellyfish(ctxGame, x, y, angle = 0, color = 'purple', SCALE_FACTOR = 0.5) {
@@ -540,6 +592,8 @@ function drawMonster(ctxGame, x, y, angle = 0, color = 'darkred', SCALE_FACTOR =
 		// ลบ canvas ก่อนวาดใหม่
 		ctxGame.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
+        drawBackground(); // JV2
+
 		// ตรวจสอบ key กด (จาก utils.js) แล้วส่งทิศทางไป server
 		if (keys['W'] || keys['w']) {
 			socket.emit("move", { direction: "up" });
@@ -575,7 +629,7 @@ function drawMonster(ctxGame, x, y, angle = 0, color = 'darkred', SCALE_FACTOR =
 
 			ctxGame.textAlign = "center";
 			ctxGame.font = "14px Arial";
-			ctxGame.fillText(player.name, player.pos.x - 10, player.pos.y - 25);
+			ctxGame.fillText(player.name, player.pos.x - 15, player.pos.y - 60);
 			ctxGame.fillText(`Score: ${player.score}`, player.pos.x, player.pos.y - 45);
 
 		});
