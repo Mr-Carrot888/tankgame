@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	// ===== สร้าง socket object =====
 	// ยังไม่เชื่อมต่อกับ server จนกว่าจะกด connect
 
-	const socket = io("https://a19725ab0b3f.ngrok-free.app", { autoConnect: false, transports: ["websocket"] })
+	const socket = io("http://localhost:5000", { autoConnect: false, transports: ["websocket"] })
 
     // --- ส่วนวาดพื้นหลังและลายหญ้า --- // JV2
     function drawBackground() {
