@@ -163,7 +163,7 @@ def game_update():
 
                         owner_sid = b['owner_sid']
                         if owner_sid in players:
-                            players[owner_sid]['score'] += 1
+                            players[owner_sid]['score'] += 1  #เพิ่มคะแนนให้ผู้ยิง
                             print(f"Player {owner_sid} ได้ 1 คะแนน! (Score: {players[owner_sid]['score']})")
 
                         try:
@@ -241,7 +241,7 @@ def handle_join_game(data):
 		'shape': data['shape'],
 		'pos': safe_pos,  # JV2
 		'direction': data['direction'],
-		'score': 0
+		'score': 0 # score เริ่มต้น
 	}
 	print(f"Player joined {request.sid} at safe spawn {safe_pos}")
 
